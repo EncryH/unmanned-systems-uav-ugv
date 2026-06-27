@@ -52,16 +52,23 @@ class TICNNetwork:
             lnk  = self.links.setdefault(platform_id, LinkState())
             spec = tmmr.spec
 
-            range_f = max(0.0, 1.0 - (dist_km / spec['max_range_km']) ** 1.5)
-            rssi_f  = max(0.0, min(1.0, (tmmr.rssi + 100) / 60))
-            power_f = tmmr.tx_power / 100
-
-            lq = int((range_f * 0.5 + rssi_f * 0.35 + power_f * 0.15) * 100)
-            lq = max(5, min(100, lq + int(random.gauss(0, 2))))
+            if tmmr.blackout:
+                lq = 0
+                lnk.loss_pct = 100.0
+            elif tmmr.jam_detected:
+                # 재밍 시 링크 품질 강제 저하 (SNR 붕괴 모사)
+                lq = max(3, int(random.gauss(7, 3)))
+                lnk.loss_pct = round(random.uniform(65, 88), 1)
+            else:
+                range_f = max(0.0, 1.0 - (dist_km / spec['max_range_km']) ** 1.5)
+                rssi_f  = max(0.0, min(1.0, (tmmr.rssi + 100) / 60))
+                power_f = tmmr.tx_power / 100
+                lq = int((range_f * 0.5 + rssi_f * 0.35 + power_f * 0.15) * 100)
+                lq = max(5, min(100, lq + int(random.gauss(0, 2))))
+                lnk.loss_pct = round(max(0.0, (65 - lq) / 65) * 40 + spec['base_loss'] * 100, 1)
 
             lnk.quality    = lq
             lnk.dist_km    = round(dist_km, 2)
-            lnk.loss_pct   = round(max(0.0, (65 - lq) / 65) * 40 + spec['base_loss'] * 100, 1)
             lnk.updated_at = time.time()
 
     def route(self, payload: dict, tmmr: TMMRNode) -> dict | None:
@@ -79,7 +86,9 @@ class TICNNetwork:
 
             if pkt_type == 'command':
                 loss *= self.QOS_CMD_LOSS_FACTOR
-            if tmmr.jam_detected:
+            if tmmr.blackout:
+                loss = 1.0
+            elif tmmr.jam_detected:
                 loss = min(0.92, loss + 0.55)
 
             if random.random() < loss:

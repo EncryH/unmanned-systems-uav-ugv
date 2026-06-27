@@ -179,6 +179,44 @@ services:
         ipv4_address: 172.20.0.50
       ops_net:
 
+  # ── 재밍 에이전트 (TMMR 전파 방해)
+  dah-jammer:
+    profiles: ["cyber-lab"]
+    restart: "no"
+    build:
+      context: .
+      dockerfile: attack_agent/Dockerfile
+    container_name: dah-jammer
+    command: ["python", "jammer.py"]
+    environment:
+      DASHBOARD_HOST: dah-dashboard
+      DASHBOARD_PORT: "14571"
+      ROUTER_HOST: dah-tactical-router
+      JAM_PORT: "14590"
+    networks:
+      dah-net:
+        ipv4_address: 172.20.0.55
+      ops_net:
+
+  # ── GPS 스푸핑 에이전트 (좌표 위조)
+  dah-spoofer:
+    profiles: ["cyber-lab"]
+    restart: "no"
+    build:
+      context: .
+      dockerfile: attack_agent/Dockerfile
+    container_name: dah-spoofer
+    command: ["python", "spoofer.py"]
+    environment:
+      GCS_HOST: dah-gcs
+      GCS_PORT: "14555"
+      DASHBOARD_HOST: dah-dashboard
+      DASHBOARD_PORT: "14571"
+    networks:
+      dah-net:
+        ipv4_address: 172.20.0.56
+      ops_net:
+
   # ── 방어 에이전트 (탐지 + 차단)
   dah-defense:
     profiles: ["cyber-lab"]
@@ -190,6 +228,7 @@ services:
     environment:
       DASHBOARD_HOST: dah-dashboard
       DASHBOARD_PORT: "14571"
+      ROUTER_HOST: dah-tactical-router
     networks:
       dah-net:
         ipv4_address: 172.20.0.60

@@ -8,6 +8,7 @@ GCS / Ground Gateway / Mission Control Server
   - 운용자 직접 Command → CC (포트 14552)
 """
 import json
+import math
 import os
 import socket
 import threading
@@ -32,6 +33,35 @@ app = Flask(__name__)
 platforms: dict = {}
 event_log: list = []
 _out_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# ── GPS 스푸핑 탐지 ────────────────────────────────────────────────────────
+MAX_SPEED_MS = 300     # 1080 km/h — 물리적으로 불가능한 속도 임계값
+_last_pos: dict = {}   # pid -> (lat, lon, ts)
+_spoof_hold_until: dict = {}  # pid -> spoofed GPS를 유지할 종료 시각
+_spoof_alert_at: dict = {}    # pid -> 최근 경고 로그 시각
+SPOOF_HOLD_SECONDS = 8
+
+
+def check_spoof(pid: str, lat: float, lon: float):
+    """
+    위치 이동 속도로 GPS 스푸핑 탐지.
+    Returns (spoofed: bool, implied_speed_kmh: int)
+    """
+    now = time.time()
+    spoofed, speed_kmh = False, 0
+    if pid in _last_pos:
+        p_lat, p_lon, p_ts = _last_pos[pid]
+        dt = now - p_ts
+        if 0 < dt < 5:
+            dlat_m = (lat - p_lat) * 111_000
+            dlon_m = (lon - p_lon) * 111_000 * math.cos(math.radians(lat))
+            dist_m = math.sqrt(dlat_m ** 2 + dlon_m ** 2)
+            speed_ms = dist_m / dt
+            if speed_ms > MAX_SPEED_MS:
+                spoofed    = True
+                speed_kmh  = int(speed_ms * 3.6)
+    _last_pos[pid] = (lat, lon, now)
+    return spoofed, speed_kmh
 
 
 def add_event(source: str, message: str, level: str = "info",
@@ -87,6 +117,41 @@ def cc_listener():
                 event_type="telemetry")
             print(f"[GCS] ← CC  {pid}  MISSION_ITEM_REACHED WP{wp_num}")
         else:
+            # GPS 스푸핑 탐지 — 위치 이동 속도 이상 검사
+            lat = payload.get("lat")
+            lon = payload.get("lon")
+            is_spoofer_packet = (
+                payload.get("attack_type") == "GPS_SPOOF"
+                or payload.get("source") == "attack_agent/GPS_SPOOFER"
+            )
+
+            if (not is_spoofer_packet
+                    and time.time() < _spoof_hold_until.get(pid, 0)):
+                print(f"[GCS] GPS SPOOF hold 유지 — 정상 CC 좌표 무시 {pid} seq={payload.get('seq')}")
+                continue
+
+            if lat is not None and lon is not None:
+                spoofed, speed_kmh = check_spoof(pid, lat, lon)
+                if is_spoofer_packet:
+                    if not speed_kmh:
+                        speed_kmh = int(payload.get("speed", 0) * 3.6)
+                    payload["gps_spoofed"]       = True
+                    payload["implied_speed_kmh"] = speed_kmh
+                    payload["status"] = "SPOOFED"
+                    _spoof_hold_until[pid] = time.time() + SPOOF_HOLD_SECONDS
+                    print(f"[GCS] ⚠️  GPS SPOOF 탐지 {pid}  속도={speed_kmh}km/h (임계={int(MAX_SPEED_MS*3.6)}km/h)")
+                    if time.time() - _spoof_alert_at.get(pid, 0) > 4:
+                        add_event(pid,
+                            f"GPS 스푸핑 탐지 — 위조 좌표 적용 lat={round(lat, 4)} lon={round(lon, 4)}",
+                            level="warn", event_type="attack", status="ALERT")
+                        _spoof_alert_at[pid] = time.time()
+                elif spoofed:
+                    payload.pop("gps_spoofed", None)
+                    payload.pop("implied_speed_kmh", None)
+                else:
+                    payload.pop("gps_spoofed", None)
+                    payload.pop("implied_speed_kmh", None)
+
             platforms[pid] = {**payload, "gcs_received_at": time.time()}
             add_event(pid,
                 f"telemetry seq={payload.get('seq')} "

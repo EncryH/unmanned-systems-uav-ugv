@@ -203,119 +203,19 @@
     className: '', iconSize: [90, 90], iconAnchor: [45, 45]
   });
 
-  // UGV — 탑뷰 전차, 포토리얼 그라디언트 + 궤도 링크
+  // UGV — SHERPA 실사 이미지 마커
   const ugvIcon = L.divIcon({
-    html: `<div style="position:relative;width:72px;height:58px">
-      <div style="position:absolute;inset:0;border-radius:4px;background:rgba(22,163,74,0.12);animation:mapPulse 2.4s infinite"></div>
-      <svg viewBox="0 0 72 58" width="72" height="58" xmlns="http://www.w3.org/2000/svg"
-           style="position:absolute;inset:0;filter:drop-shadow(0 3px 7px rgba(0,0,0,.85))">
-        <defs>
-          <linearGradient id="gh" x1="0.5" y1="0" x2="0.5" y2="1">
-            <stop offset="0%"   stop-color="#4d7c3f"/>
-            <stop offset="40%"  stop-color="#365c2c"/>
-            <stop offset="100%" stop-color="#1e3a18"/>
-          </linearGradient>
-          <radialGradient id="gt" cx="42%" cy="38%">
-            <stop offset="0%"   stop-color="#5d9147"/>
-            <stop offset="55%"  stop-color="#3a6830"/>
-            <stop offset="100%" stop-color="#1e3a18"/>
-          </radialGradient>
-          <linearGradient id="gtr" x1="0.5" y1="0" x2="0.5" y2="1">
-            <stop offset="0%"   stop-color="#2d4a23"/>
-            <stop offset="100%" stop-color="#131f0f"/>
-          </linearGradient>
-        </defs>
-
-        <!-- 그림자 -->
-        <ellipse cx="36" cy="34" rx="28" ry="16" fill="rgba(0,0,0,0.28)"/>
-
-        <!-- 좌측 궤도 -->
-        <rect x="1"  y="5" width="11" height="48" rx="5.5" fill="url(#gtr)" stroke="#2d4a23" stroke-width="0.7"/>
-        <!-- 궤도 링크 (좌) -->
-        <rect x="2"  y="11" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <rect x="2"  y="16" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <rect x="2"  y="21" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <rect x="2"  y="26" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <rect x="2"  y="31" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <rect x="2"  y="36" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <rect x="2"  y="41" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <!-- 전방/후방 기동륜 (좌) -->
-        <circle cx="6.5" cy="8"  r="4.5" fill="#243b1c" stroke="#4d7c3f" stroke-width="1"/>
-        <circle cx="6.5" cy="8"  r="2"   fill="#365c2c"/>
-        <circle cx="6.5" cy="50" r="4.5" fill="#243b1c" stroke="#4d7c3f" stroke-width="1"/>
-        <circle cx="6.5" cy="50" r="2"   fill="#365c2c"/>
-
-        <!-- 우측 궤도 -->
-        <rect x="60" y="5" width="11" height="48" rx="5.5" fill="url(#gtr)" stroke="#2d4a23" stroke-width="0.7"/>
-        <!-- 궤도 링크 (우) -->
-        <rect x="61" y="11" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <rect x="61" y="16" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <rect x="61" y="21" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <rect x="61" y="26" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <rect x="61" y="31" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <rect x="61" y="36" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <rect x="61" y="41" width="9" height="1.8" rx="0.6" fill="#3a5c30" opacity="0.8"/>
-        <!-- 전방/후방 기동륜 (우) -->
-        <circle cx="65.5" cy="8"  r="4.5" fill="#243b1c" stroke="#4d7c3f" stroke-width="1"/>
-        <circle cx="65.5" cy="8"  r="2"   fill="#365c2c"/>
-        <circle cx="65.5" cy="50" r="4.5" fill="#243b1c" stroke="#4d7c3f" stroke-width="1"/>
-        <circle cx="65.5" cy="50" r="2"   fill="#365c2c"/>
-
-        <!-- 차체 (hull) -->
-        <rect x="12" y="8" width="48" height="42" rx="3.5" fill="url(#gh)" stroke="#2d4a23" stroke-width="0.7"/>
-
-        <!-- 전면 경사 장갑 -->
-        <polygon points="12,8 60,8 57,17 15,17" fill="#4d7c3f" stroke="#3a5c30" stroke-width="0.5"/>
-        <!-- 전면 ERA 블록 -->
-        <rect x="16" y="9"  width="9" height="6" rx="0.7" fill="#3a5c30" stroke="#243b1c" stroke-width="0.4"/>
-        <rect x="27" y="9"  width="9" height="6" rx="0.7" fill="#3a5c30" stroke="#243b1c" stroke-width="0.4"/>
-        <rect x="38" y="9"  width="9" height="6" rx="0.7" fill="#3a5c30" stroke="#243b1c" stroke-width="0.4"/>
-        <rect x="49" y="9"  width="8" height="6" rx="0.7" fill="#3a5c30" stroke="#243b1c" stroke-width="0.4"/>
-
-        <!-- 차체 패널 라인 -->
-        <line x1="12" y1="30" x2="60" y2="30" stroke="#243b1c" stroke-width="0.6" opacity="0.5"/>
-        <!-- 사이드 스커트 -->
-        <rect x="12" y="22" width="7"  height="22" rx="1" fill="#3a5c30" stroke="#243b1c" stroke-width="0.4" opacity="0.8"/>
-        <rect x="53" y="22" width="7"  height="22" rx="1" fill="#3a5c30" stroke="#243b1c" stroke-width="0.4" opacity="0.8"/>
-        <!-- 후면 -->
-        <rect x="15" y="44" width="42" height="6"  rx="2" fill="#1e3a18" stroke="#2d4a23" stroke-width="0.5"/>
-
-        <!-- 포탑 링 -->
-        <circle cx="36" cy="27" r="16" fill="#1e3a18" opacity="0.25"/>
-        <!-- 포탑 -->
-        <ellipse cx="36" cy="27" rx="14" ry="13" fill="url(#gt)" stroke="#2d4a23" stroke-width="0.8"/>
-        <!-- 포탑 전면 경사 하이라이트 -->
-        <ellipse cx="36" cy="22" rx="11" ry="5.5" fill="#5d9147" opacity="0.35"/>
-        <!-- 포탑 하이라이트 -->
-        <ellipse cx="34" cy="23" rx="5"  ry="3.5" fill="#7ab368"   opacity="0.15"/>
-
-        <!-- 주포 (tapering barrel) -->
-        <rect x="34" y="2"  width="4"   height="24" rx="2"   fill="#1a2e13" stroke="#2d4a23" stroke-width="0.5"/>
-        <rect x="33" y="2"  width="6"   height="5"  rx="1.5" fill="#111f0d" stroke="#243b1c" stroke-width="0.4"/>
-        <rect x="33.5" y="4" width="5" height="2"   rx="0.5" fill="#243b1c"/>
-
-        <!-- 동축기관총 -->
-        <rect x="38.5" y="10" width="1.8" height="12" rx="0.6" fill="#111f0d" stroke="#1a2e13" stroke-width="0.3"/>
-
-        <!-- 사수/전차장 해치 -->
-        <circle cx="33" cy="26" r="4.5" fill="#1a2e13" stroke="#3a5c30" stroke-width="0.7"/>
-        <circle cx="33" cy="26" r="2.2" fill="#111f0d"/>
-        <circle cx="40" cy="28" r="3"   fill="#1a2e13" stroke="#3a5c30" stroke-width="0.6"/>
-        <circle cx="40" cy="28" r="1.5" fill="#111f0d"/>
-
-        <!-- 열상/레이저 거리계 -->
-        <rect x="36" y="19" width="9" height="3" rx="1" fill="#111f0d" stroke="#243b1c" stroke-width="0.4"/>
-        <rect x="37" y="19.5" width="2.5" height="2" rx="0.5" fill="#1e3a5f"/>
-        <rect x="41" y="19.5" width="2.5" height="2" rx="0.5" fill="#1e3a5f"/>
-
-        <!-- 연막탄 발사기 -->
-        <rect x="15" y="19" width="6" height="3.5" rx="0.6" fill="#111f0d" stroke="#243b1c" stroke-width="0.3"/>
-        <circle cx="16.5" cy="20.5" r="0.8" fill="#374151"/>
-        <circle cx="18.5" cy="20.5" r="0.8" fill="#374151"/>
-        <circle cx="20.5" cy="20.5" r="0.8" fill="#374151"/>
-      </svg>
+    html: `<div id="ugv-icon-wrap" style="position:relative;width:104px;height:74px;overflow:visible">
+      <div style="position:absolute;left:16px;top:16px;width:64px;height:42px;border-radius:50%;
+                  background:rgba(22,163,74,0.14);animation:mapPulse 2.4s infinite"></div>
+      <img id="ugv-img" src="/static/ugv-sherpa.png?v=2"
+           style="width:104px;height:74px;object-fit:contain;
+                  position:absolute;top:0;left:0;
+                  filter:drop-shadow(0 4px 9px rgba(0,0,0,.85));
+                  transform-origin:52px 37px;
+                  transition:transform 0.5s ease"/>
     </div>`,
-    className: '', iconSize: [72, 58], iconAnchor: [36, 29]
+    className: '', iconSize: [104, 74], iconAnchor: [52, 37]
   });
 
   // 실시간 갱신용 마커 및 궤적
@@ -332,6 +232,7 @@
   let ugvTarget = null, ugvCurr = null;
   let lastTrailLL = null;
   let uavDispHdg = 0; // 현재 표시 중인 아이콘 회전각
+  let ugvDispHdg = 90; // SHERPA 이미지 기본 방향 보정
   function lerp(a, b, t) { return a + (b - a) * t; }
 
   // 최단 각도 보간 (0↔360 경계 처리)
@@ -379,9 +280,18 @@
     }
     if (ugvTarget) {
       if (!ugvCurr) ugvCurr = { lat: ugvTarget.lat, lon: ugvTarget.lon };
+      const prevUgv = { ...ugvCurr };
       ugvCurr.lat = lerp(ugvCurr.lat, ugvTarget.lat, 0.05);
       ugvCurr.lon = lerp(ugvCurr.lon, ugvTarget.lon, 0.05);
       ugvMk.setLatLng([ugvCurr.lat, ugvCurr.lon]);
+      const dLat = ugvCurr.lat - prevUgv.lat;
+      const dLon = ugvCurr.lon - prevUgv.lon;
+      if (Math.abs(dLat) > 1e-8 || Math.abs(dLon) > 1e-8) {
+        const targetHdg = bearingTo(prevUgv.lat, prevUgv.lon, ugvCurr.lat, ugvCurr.lon);
+        ugvDispHdg = lerpAngle(ugvDispHdg, targetHdg + 90, 0.08);
+        const imgEl = document.getElementById('ugv-img');
+        if (imgEl) imgEl.style.transform = `rotate(${ugvDispHdg}deg)`;
+      }
     }
   })();
 
@@ -389,11 +299,18 @@
   function setSignalBars(wrapId, level, quality) {
     const el = document.getElementById(wrapId);
     if (!el) return;
-    const cls = quality === 'good' ? 'on' : quality === 'warn' ? 'warn' : 'on';
+    const cls = quality === 'good' ? 'on' : quality === 'warn' ? 'warn' : 'bad';
     el.querySelectorAll('.sig-bar').forEach((bar, i) => {
       bar.className = 'sig-bar ' + ['s1','s2','s3','s4'][i];
       if (i < level) bar.classList.add(cls);
     });
+  }
+
+  function isCommsLost(p) {
+    if (!p) return false;
+    const loss = Number(p.ticn?.loss_pct ?? 0);
+    const lq = Number(p.ticn?.link_quality ?? 100);
+    return !!p.comms_lost || !!p.tmmr?.blackout || loss >= 80 || lq <= 30 || p.status === 'COMMS_LOST';
   }
 
   // API 수신 시 목표값 업데이트 + 사이드패널 갱신
@@ -403,7 +320,8 @@
 
     const u = platforms['UAV-001'];
     if (u && u.lat != null && u.lon != null) {
-      uavTarget = u;
+      const uLost = isCommsLost(u);
+      uavTarget = uLost && uavCurr ? { ...u, lat: uavCurr.lat, lon: uavCurr.lon } : u;
       updateCamUAV(u);
       if (u.hdg != null) {
         const imgEl = $('uav-img');
@@ -412,21 +330,56 @@
       setText('msp-uav-lat',      u.lat.toFixed(5));
       setText('msp-uav-lon',      u.lon.toFixed(5));
       setText('msp-uav-alt',      (u.alt   ?? '--') + ' m');
-      setText('msp-uav-spd',      (u.speed ?? '--') + ' m/s');
-      setText('msp-uav-hdg',      (u.hdg != null ? Math.round(u.hdg) : '--') + '°');
+      setText('msp-uav-spd',      uLost ? '0 m/s' : (u.speed ?? '--') + ' m/s');
+      setText('msp-uav-hdg',      uLost ? '--°' : (u.hdg != null ? Math.round(u.hdg) : '--') + '°');
       setText('msp-uav-fuel',     (u.fuel  ?? '--') + '%');
       const fuelBar = $('msp-uav-fuel-bar');
       if (fuelBar) fuelBar.style.width = (u.fuel ?? 78) + '%';
 
       // 신호/링크 품질 (TICN loss_pct 기반)
       const loss = u.ticn?.loss_pct ?? 0;
-      const sigLevel = loss < 5 ? 4 : loss < 15 ? 3 : loss < 30 ? 2 : 1;
-      const sigQ     = loss < 10 ? 'good' : loss < 25 ? 'warn' : 'bad';
+      const sigLevel = uLost ? 1 : loss < 5 ? 4 : loss < 15 ? 3 : loss < 30 ? 2 : 1;
+      const sigQ     = uLost ? 'bad' : loss < 10 ? 'good' : loss < 25 ? 'warn' : 'bad';
       setSignalBars('msp-uav-signal', sigLevel, sigQ);
-      setText('msp-uav-link-txt', loss < 10 ? '양호' : loss < 25 ? '보통' : '불량');
+      setText('msp-uav-link-txt', uLost ? '통신불량' : loss < 10 ? '양호' : loss < 25 ? '보통' : '불량');
 
       const dotEl = $('msp-uav-dot');
-      if (dotEl) dotEl.className = 'msp-dot';
+      if (dotEl) dotEl.className = uLost ? 'msp-dot msp-dot-r' : 'msp-dot';
+
+      // GPS 스푸핑 탐지 시각화 — 궤적/마커 빨간색 + 경고 배지
+      const spoofed = !!u.gps_spoofed;
+      uavTrail.setStyle({ color: spoofed ? '#ef4444' : '#2563eb' });
+      const uavWrap = document.getElementById('uav-icon-wrap');
+      if (uavWrap) {
+        uavWrap.style.filter = spoofed
+          ? 'drop-shadow(0 0 8px #ef4444) drop-shadow(0 0 16px #ef4444)'
+          : uLost
+          ? 'drop-shadow(0 0 8px #ef4444) drop-shadow(0 0 16px rgba(239,68,68,.6))'
+          : '';
+      }
+      let spoofBadge = document.getElementById('spoof-badge');
+      if (spoofed) {
+        if (!spoofBadge) {
+          spoofBadge = document.createElement('div');
+          spoofBadge.id = 'spoof-badge';
+          spoofBadge.style.cssText = [
+            'position:fixed', 'top:60px', 'left:50%', 'transform:translateX(-50%)',
+            'z-index:9999', 'background:#ef4444', 'color:#fff',
+            'padding:6px 18px', 'border-radius:6px', 'font-size:13px',
+            'font-weight:700', 'letter-spacing:.5px',
+            'box-shadow:0 0 20px rgba(239,68,68,.6)',
+            'animation:spoof-blink 0.8s step-start infinite',
+          ].join(';');
+          document.body.appendChild(spoofBadge);
+          const style = document.createElement('style');
+          style.textContent = '@keyframes spoof-blink{0%,100%{opacity:1}50%{opacity:.3}}';
+          document.head.appendChild(style);
+        }
+        const spd = u.implied_speed_kmh ? ` (${u.implied_speed_kmh}km/h)` : '';
+        spoofBadge.textContent = `⚠ GPS 좌표 위조 탐지${spd} — 관성항법 전환 중`;
+      } else if (spoofBadge) {
+        spoofBadge.remove();
+      }
     }
 
     const g = platforms['UGV-001'];
@@ -556,6 +509,7 @@
       (data.platforms || []).forEach(p => { platforms[p.platform_id] = p; });
 
       updateMapMarkers(platforms);
+      updateMissionState(data.mission_state);
 
       const uav   = platforms['UAV-001'];
       const ugv   = platforms['UGV-001'];
@@ -574,7 +528,7 @@
         setDot('dot-latency', v == null ? 'r' : v < 500 ? 'g' : 'r');
       }
       if (uav?.ticn) {
-        const loss = uav.ticn.loss_pct;
+        const loss = isCommsLost(uav) ? 100 : uav.ticn.loss_pct;
         setText('hdr-loss', loss + ' %');
         setDot('dot-loss', loss < 10 ? 'g' : loss < 25 ? 'b' : 'r');
       }
@@ -599,19 +553,20 @@
       const tmmr    = uav?.tmmr;
       const ticn    = uav?.ticn;
       const lq      = ticn?.link_quality ?? null;
-      const gcsRtOn = isOn(uav) && lq != null && lq > 30;
-      setBadge('lnk-gcs-rt-st', gcsRtOn);
+      const uavLost = isCommsLost(uav);
+      const gcsRtOn = isOn(uav) && !uavLost && lq != null && lq > 30;
+      setBadge('lnk-gcs-rt-st', gcsRtOn, uavLost ? '두절' : undefined);
       if (tmmr?.waveform) setText('lnk-gcs-rt-wf', tmmr.waveform);
       setText('lnk-gcs-rt-rssi', tmmr?.rssi_dbm != null ? tmmr.rssi_dbm + ' dBm' : '-- dBm');
       setText('lnk-gcs-rt-loss', ticn?.loss_pct  != null ? ticn.loss_pct  + ' %'  : '-- %');
 
       // Router → Upper C2/BMS (TICN)
-      setBadge('lnk-rt-c2-st', gcsRtOn);
+      setBadge('lnk-rt-c2-st', gcsRtOn, uavLost ? '두절' : undefined);
       setText('lnk-rt-c2-lq',   lq != null ? 'LQ ' + lq : 'LQ --');
       setText('lnk-rt-c2-loss', ticn?.loss_pct != null ? ticn.loss_pct + ' %' : '-- %');
 
       // C2 → Router → GCS (명령 하달 경로 — 전술망 정상 시 활성)
-      setBadge('lnk-c2-rt-st', sysOk && gcsRtOn);
+      setBadge('lnk-c2-rt-st', sysOk && gcsRtOn, uavLost ? '두절' : undefined);
 
       // UGV → Router (ROS2/JSON)
       const ugvAge = age(ugv?.gcs_received_at);
@@ -619,6 +574,66 @@
       setBadge('lnk-ugv-st', ugvOn);
       setText('lnk-ugv-lat',  ugvAge != null ? ugvAge + ' ms' : '-- ms');
       setText('lnk-ugv-loss', ugv?.ticn?.loss_pct != null ? ugv.ticn.loss_pct + ' %' : '-- %');
+
+      // ── TMMR / TICN 시각화 업데이트 ──────────────────────────────────
+      const rssi    = uav?.tmmr?.rssi_dbm ?? null;
+      const wf      = uav?.tmmr?.waveform ?? '--';
+      // lq 는 위에서 이미 선언됨 (ticn?.link_quality)
+      const lossPct = uav?.ticn?.loss_pct ?? null;
+
+      // RSSI 바 (-120 dBm = 0%, -50 dBm = 100%)
+      if (rssi !== null) {
+        const rssiPct = Math.max(0, Math.min(100, ((rssi + 120) / 70) * 100));
+        const rssiBar = document.getElementById('tmmr-rssi-bar');
+        if (rssiBar) {
+          rssiBar.style.height = rssiPct + '%';
+          rssiBar.style.background = rssiPct > 60
+            ? 'linear-gradient(to top,#22c55e,#86efac)'
+            : rssiPct > 30
+            ? 'linear-gradient(to top,#f59e0b,#fcd34d)'
+            : 'linear-gradient(to top,#ef4444,#fca5a5)';
+        }
+        setText('tmmr-rssi-val', rssi + ' dBm');
+      }
+
+      // Waveform 배지
+      const wfBadge = document.getElementById('tmmr-wf-badge');
+      if (wfBadge) wfBadge.textContent = wf;
+      const chStatus = document.getElementById('tmmr-ch-status');
+      if (chStatus) {
+        chStatus.textContent = uavLost ? '통신 두절' : gcsRtOn ? '정상' : '재밍 의심';
+        chStatus.style.color = gcsRtOn ? '#22c55e' : '#ef4444';
+      }
+
+      // TICN LQ 바
+      if (lq !== null) {
+        const lqFill = document.getElementById('ticn-lq-fill');
+        if (lqFill) {
+          lqFill.style.width = lq + '%';
+          lqFill.style.background = lq > 60
+            ? 'linear-gradient(to right,#22c55e,#86efac)'
+            : lq > 30
+            ? 'linear-gradient(to right,#f59e0b,#fcd34d)'
+            : 'linear-gradient(to right,#ef4444,#fca5a5)';
+        }
+        setText('ticn-lq-val', lq + ' / 100');
+      }
+
+      // 패킷 손실 바
+      if (lossPct !== null) {
+        const lossFill = document.getElementById('ticn-loss-fill');
+        if (lossFill) lossFill.style.width = Math.min(100, lossPct) + '%';
+        setText('ticn-loss-val', lossPct + ' %');
+      }
+
+      // 토폴로지 노드 색상
+      const topoSet  = (id, ok) => { const el = document.getElementById(id); if (el) el.className = 'ticn-node '  + (ok ? 'node-ok'  : 'node-err'); };
+      const arrowSet = (id, ok) => { const el = document.getElementById(id); if (el) el.className = 'ticn-arrow ' + (ok ? 'arrow-ok' : 'arrow-err'); };
+      topoSet('topo-uav',    uavOn);     arrowSet('topo-a1', uavOn);
+      topoSet('topo-gcs',    uavOn);     arrowSet('topo-a2', gcsRtOn);
+      topoSet('topo-tmmr',   gcsRtOn);   arrowSet('topo-a3', gcsRtOn);
+      topoSet('topo-router', gcsRtOn);   arrowSet('topo-a4', sysOk && gcsRtOn);
+      topoSet('topo-c2',     sysOk && gcsRtOn);
 
       // UTC 시간 문자열 → 로컬(KST) 시간 문자열 변환
       function utcToLocal(timeStr) {
@@ -635,13 +650,14 @@
         const key = `wp|${localTime}|${ev.message}`;
         if (seen1.has(key)) return;
         seen1.add(key);
+        const commsBad = isCommsLost(platforms['UAV-001']);
         addLog(`<tr class="row-uav" data-type="tel">
           <td class="col-time">${localTime}</td>
           <td><span class="log-type-tel">TEL</span></td>
           <td class="col-src-uav">UAV-001</td>
           <td class="col-data" style="color:#22c55e;font-weight:600">${ev.message}</td>
           <td><span class="badge b-mav">MAVLink</span></td>
-          <td><span class="badge b-ok">정상</span></td>
+          <td><span class="badge ${commsBad ? 'b-bad' : 'b-ok'}">${commsBad ? '통신불량' : '정상'}</span></td>
         </tr>`);
       });
 
@@ -658,6 +674,7 @@
         seen1.add(key);
         const isUAV  = ev.source === 'UAV-001';
         const p      = platforms[ev.source] || {};
+        const commsBad = isCommsLost(p);
         const proto  = isUAV ? '<span class="badge b-mav">MAVLink</span>' : '<span class="badge b-ros">ROS2_JSON</span>';
         const mtype  = isUAV ? 'GLOBAL_POSITION' : 'ODOM';
         const detail = isUAV
@@ -671,7 +688,7 @@
           <td class="${srcCls}">${ev.source}</td>
           <td class="col-data" title="${mtype}: ${detail}">${mtype}: ${detail}</td>
           <td>${proto}</td>
-          <td><span class="badge b-ok">정상</span></td>
+          <td><span class="badge ${commsBad ? 'b-bad' : 'b-ok'}">${commsBad ? '통신불량' : '정상'}</span></td>
         </tr>`);
       });
 
@@ -731,16 +748,8 @@
     d1Poll();
     setInterval(d1Poll, 1500);
 
-    // ── Mission State 타이머 ────────────────────────────────────────────
+    // ── Mission State (C2 API 연동) ──────────────────────────────────────
     const MSN_START = new Date();
-    const MSN_PHASES = [
-      { phase: 'PRE_FLIGHT',  desc: '이륙 전 점검 중',            advice: '체크리스트 완료 후 이륙 허가 대기' },
-      { phase: 'TAKEOFF',     desc: '이륙 및 초기 상승 중',        advice: '안전 고도 확보 후 웨이포인트 진입' },
-      { phase: 'EN_ROUTE',    desc: '목표 지역으로 이동 중',        advice: '경로 유지 및 주변 감시 지속' },
-      { phase: 'ON_STATION',  desc: '정찰 구역 도달 — 임무 수행 중', advice: '센서 전방위 스캔 유지, 이상 징후 보고' },
-      { phase: 'RTB',         desc: '귀환 비행 중 (Return to Base)', advice: '랜딩 준비 체크리스트 수행' },
-    ];
-    let msnPhaseIdx = 2; // 기본 EN_ROUTE
 
     function fmtDuration(ms) {
       const s = Math.floor(ms / 1000);
@@ -749,28 +758,56 @@
       const sec = String(s % 60).padStart(2, '0');
       return `${h}:${m}:${sec}`;
     }
-    function fmtTime(d) {
-      return d.toTimeString().slice(0, 8);
-    }
-    (function tickMsn() {
-      const el = k => document.getElementById(k);
-      const p = MSN_PHASES[msnPhaseIdx];
-      if (el('msn-phase'))   el('msn-phase').textContent   = p.phase;
-      if (el('msn-desc'))    el('msn-desc').textContent    = p.desc;
-      if (el('msn-advice'))  el('msn-advice').textContent  = p.advice;
-      if (el('msn-elapsed')) el('msn-elapsed').textContent = fmtDuration(Date.now() - MSN_START);
-      if (el('msn-start'))   el('msn-start').textContent   = fmtTime(MSN_START);
-      setTimeout(tickMsn, 1000);
-    })();
 
+    // API에서 받은 mission_state로 패널 업데이트
+    function updateMissionState(ms) {
+      if (!ms) return;
+      const el = k => document.getElementById(k);
+      const phaseEl = el('msn-phase');
+      if (phaseEl) {
+        phaseEl.textContent = ms.phase || 'EN_ROUTE';
+        // 위험 상태 색상
+        phaseEl.style.color = ['LANDING','RTB','LOITER','COMMS_LOST'].includes(ms.phase)
+          ? '#ef4444' : ms.phase === 'PAUSED' ? '#f59e0b' : '';
+      }
+      if (el('msn-desc'))   el('msn-desc').textContent   = ms.desc   || '--';
+      if (el('msn-advice')) el('msn-advice').textContent = ms.advice  || '--';
+      if (el('msn-elapsed')) el('msn-elapsed').textContent = fmtDuration(Date.now() - MSN_START);
+    }
+
+    // 경과 시간 매초 갱신
+    setInterval(() => {
+      const el = document.getElementById('msn-elapsed');
+      if (el) el.textContent = fmtDuration(Date.now() - MSN_START);
+    }, 1000);
+
+    // 버튼 → POST /api/command → UAV MAVLink 전송
     const msnCmdCooldown = {};
-    window.sendMsnCmd = function(cmd) {
+    const CMD_LABELS = {
+      HOLD:    '경로 유지 (HOLD)',
+      MONITOR: '감시 강화 (MONITOR)',
+      PAUSE:   '임무 일시정지 (PAUSE)',
+      RESUME:  '임무 재개 (RESUME)',
+      RTB:     '귀환 (RTB)',
+    };
+    window.sendMsnCmd = async function(cmd) {
       if (msnCmdCooldown[cmd]) return;
       msnCmdCooldown[cmd] = true;
-      setTimeout(() => { delete msnCmdCooldown[cmd]; }, 4000);
-      const labels = { HOLD: '경로 유지', MONITOR: '감시 강화', PAUSE: '임무 일시정지' };
-      appendCmd('UAV-001', labels[cmd] || cmd, 'SENT');
-      setTimeout(() => updateCmdBadge('UAV-001', labels[cmd] || cmd, 'ACK'), 800 + Math.random() * 600);
+      setTimeout(() => { delete msnCmdCooldown[cmd]; }, 3000);
+
+      const label = CMD_LABELS[cmd] || cmd;
+      appendCmd('UAV-001', label, 'SENT');
+      try {
+        const res = await fetch('/api/command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cmd, target: 'UAV-001' }),
+        });
+        const data = await res.json();
+        updateCmdBadge('UAV-001', label, data.ok ? 'ACK' : 'ERR');
+      } catch {
+        updateCmdBadge('UAV-001', label, 'ERR');
+      }
     };
 
     // ── 최근 명령 로그 (실제 버튼 명령만 기록) ─────────────────────────

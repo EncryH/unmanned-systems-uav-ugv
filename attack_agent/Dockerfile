@@ -8,10 +8,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-# recon.py, executor.py 둘 다 복사
-# context가 DAH/ 루트이므로 경로 포함해서 지정
+# 공격 에이전트 전체 복사
 COPY attack_agent/recon.py .
 COPY attack_agent/executor.py .
+COPY attack_agent/jammer.py .
+COPY attack_agent/spoofer.py .
 
 # 기본 실행은 recon.py
 # executor는 docker-compose에서 command로 오버라이드

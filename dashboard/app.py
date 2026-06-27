@@ -6,18 +6,53 @@ import time
 import urllib.error
 import urllib.request
 from collections import deque
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
+from pymavlink import mavutil
 
 app = Flask(__name__)
 
 MISSION_CONTROL_URL   = os.getenv("MISSION_CONTROL_URL", "http://mission-control:8080")
 GCS_URL               = os.getenv("GCS_URL",            "http://dah-gcs:8080")
-GCS_TELEMETRY_PORT    = int(os.getenv("ROUTER_TELEMETRY_PORT", "14571"))  # GCS/Router UDP fan-out 수신 포트
+GCS_TELEMETRY_PORT    = int(os.getenv("ROUTER_TELEMETRY_PORT", "14571"))
+UAV_HOST              = os.getenv("UAV_HOST",     "172.20.0.10")
+UAV_CMD_PORT          = int(os.getenv("UAV_CMD_PORT", "14551"))
+GCS_SYS_ID            = 255  # 정상 GCS SYS_ID
 
-# UDP로 직접 수신한 플랫폼 상태 + 로컬 이벤트 (UGV 등 GCS 비경유 데이터)
+# UDP로 직접 수신한 플랫폼 상태 + 로컬 이벤트
 router_platforms: dict = {}
 local_events: deque  = deque(maxlen=100)
 agent_events: deque  = deque(maxlen=300)
+
+# 임무 상태 (C2 명령 기반)
+mission_state: dict = {
+    "phase":   "EN_ROUTE",
+    "desc":    "목표 지역으로 이동 중",
+    "advice":  "경로 유지 및 주변 감시 지속",
+    "cmd":     None,
+    "cmd_at":  None,
+    "cmd_by":  "SYSTEM",
+}
+
+PHASE_MAP = {
+    "HOLD":    {"phase": "LOITER",     "desc": "지정 구역 선회 대기",       "advice": "현재 좌표 유지, 추가 명령 대기"},
+    "MONITOR": {"phase": "ON_STATION", "desc": "감시 구역 집중 스캔",        "advice": "센서 전방위 스캔, 이상 징후 보고"},
+    "PAUSE":   {"phase": "PAUSED",     "desc": "임무 일시정지",              "advice": "현재 상태 유지, RESUME 명령 대기"},
+    "RESUME":  {"phase": "EN_ROUTE",   "desc": "목표 지역으로 이동 중",      "advice": "경로 유지 및 주변 감시 지속"},
+    "RTB":     {"phase": "RTB",        "desc": "귀환 비행 중 (Return to Base)", "advice": "랜딩 준비 체크리스트 수행"},
+}
+
+# MAVLink 커넥션 (dashboard → UAV 직접)
+_mav_conn = None
+_mav_lock = threading.Lock()
+
+def get_mav():
+    global _mav_conn
+    if _mav_conn is None:
+        _mav_conn = mavutil.mavlink_connection(
+            f"udpout:{UAV_HOST}:{UAV_CMD_PORT}",
+            source_system=GCS_SYS_ID,
+        )
+    return _mav_conn
 
 
 def _router_udp_listener():
@@ -40,6 +75,52 @@ def _router_udp_listener():
                     "message":    payload.get("message", ""),
                     "detail":     payload.get("detail", ""),
                     "status":     payload.get("status", ""),
+                })
+                continue
+
+            if ptype == "NETWORK":
+                target = payload.get("target_platform_id")
+                ticn = payload.get("ticn", {})
+                tmmr = payload.get("tmmr", {})
+                loss_pct = ticn.get("loss_pct", 100.0)
+                link_quality = ticn.get("link_quality", 0)
+
+                local_events.appendleft({
+                    "type":    "telemetry",
+                    "time":    payload.get("time", time.strftime("%H:%M:%S")),
+                    "level":   "warn",
+                    "source":  target or "TICN-LINK",
+                    "message": payload.get("message", "전술 데이터링크 통신 두절"),
+                    "status":  "COMMS_LOST",
+                })
+
+                if target:
+                    prev = router_platforms.get(target, {})
+                    ptype_hint = prev.get("platform_type") or ("UAV" if target.startswith("UAV") else "UGV")
+                    router_platforms[target] = {
+                        **prev,
+                        "platform_id": target,
+                        "platform_type": ptype_hint,
+                        "mode": "LOITER" if target.startswith("UAV") else prev.get("mode", "AUTO"),
+                        "status": "COMMS_LOST",
+                        "comms_lost": True,
+                        "gcs_received_at": time.time(),
+                        "tmmr": {**prev.get("tmmr", {}), **tmmr},
+                        "ticn": {
+                            **prev.get("ticn", {}),
+                            **ticn,
+                            "loss_pct": loss_pct,
+                            "link_quality": link_quality,
+                        },
+                    }
+
+                mission_state.update({
+                    "phase":  "LOITER",
+                    "desc":   "통신 두절로 제자리 배회",
+                    "advice": "현재 좌표 유지, 전술 링크 복구 대기",
+                    "cmd":    "COMMS_LOST",
+                    "cmd_at": payload.get("time", time.strftime("%H:%M:%S")),
+                    "cmd_by": "TICN/TMMR",
                 })
                 continue
 
@@ -254,6 +335,56 @@ def json_loads(raw):
     return json.loads(raw.decode("utf-8"))
 
 
+@app.post("/api/command")
+def send_command():
+    body   = request.get_json(force=True) or {}
+    cmd    = body.get("cmd", "").upper()
+    target = body.get("target", "UAV-001")
+
+    CMD_TO_MAV = {
+        "HOLD":    (mavutil.mavlink.MAV_CMD_NAV_LOITER_UNLIM,     [0,0,0,0,0,0,0]),
+        "MONITOR": (mavutil.mavlink.MAV_CMD_DO_CHANGE_SPEED,      [0, 100, -1, 0, 0, 0, 0]),
+        "PAUSE":   (mavutil.mavlink.MAV_CMD_DO_PAUSE_CONTINUE,    [0, 0, 0, 0, 0, 0, 0]),
+        "RESUME":  (mavutil.mavlink.MAV_CMD_DO_PAUSE_CONTINUE,    [1, 0, 0, 0, 0, 0, 0]),
+        "RTB":     (mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, [0,0,0,0,0,0,0]),
+    }
+
+    if cmd not in CMD_TO_MAV:
+        return jsonify({"ok": False, "error": f"unknown cmd: {cmd}"}), 400
+
+    mav_cmd, params = CMD_TO_MAV[cmd]
+    try:
+        with _mav_lock:
+            mav = get_mav()
+            mav.mav.command_long_send(
+                target_system=1, target_component=1,
+                command=mav_cmd, confirmation=0,
+                param1=params[0], param2=params[1], param3=params[2],
+                param4=params[3], param5=params[4], param6=params[5], param7=params[6],
+            )
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+    # 임무 상태 업데이트
+    if cmd in PHASE_MAP:
+        mission_state.update(PHASE_MAP[cmd])
+        mission_state["cmd"]    = cmd
+        mission_state["cmd_at"] = time.strftime("%H:%M:%S")
+        mission_state["cmd_by"] = "C2/GCS"
+
+    # 로컬 이벤트에도 기록
+    local_events.appendleft({
+        "type":    "command",
+        "time":    time.strftime("%H:%M:%S"),
+        "source":  "C2/GCS",
+        "target":  target,
+        "message": f"C2 명령 전송: {cmd}",
+        "status":  "SENT",
+    })
+    print(f"[C2] {cmd} → {target} ({UAV_HOST}:{UAV_CMD_PORT})")
+    return jsonify({"ok": True, "cmd": cmd, "target": target})
+
+
 @app.get("/")
 def index():
     return render_template("index.html", topology=TOPOLOGY)
@@ -301,10 +432,11 @@ def live():
     return jsonify({
         "status": "ok",
         **dashboard,
-        "platforms":    list(merged.values()),
-        "events":       merged_events[:50],
-        "agent_events": list(agent_events)[:100],
-        "gcs_direct":   len(router_platforms),
+        "platforms":     list(merged.values()),
+        "events":        merged_events[:50],
+        "agent_events":  list(agent_events)[:100],
+        "gcs_direct":    len(router_platforms),
+        "mission_state": mission_state,
     })
 
 

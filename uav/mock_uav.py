@@ -1,8 +1,13 @@
+import json
 import math
 import threading
 import socket
 import time
+import urllib.request
 from pymavlink import mavutil
+
+DASHBOARD_URL = "http://dah-dashboard:8080"
+LINK_LOST_THRESHOLD = 15   # loss_pct 이상이면 Link Lost
 
 # ─────────────────────────────────────────
 # 송골매 UAV 기본 설정값
@@ -35,7 +40,33 @@ WAYPOINTS = [
 LAT_PER_M = 1 / 111_000
 LON_PER_M = 1 / (111_000 * math.cos(math.radians(37.9)))
 
-status = {'mode': 'MISSION', 'alt': ALTITUDE}  # MISSION | LANDING | RTL
+status = {'mode': 'MISSION', 'alt': ALTITUDE}  # MISSION | LANDING | RTL | LOITER
+
+
+def link_monitor():
+    """링크 품질 감시 — loss_pct 급등 시 LOITER 전환, 복구 시 임무 복귀"""
+    loiter_ticks = 0
+    while True:
+        time.sleep(2)
+        try:
+            with urllib.request.urlopen(f"{DASHBOARD_URL}/api/live", timeout=1.5) as r:
+                data = json.loads(r.read())
+            pmap = {p["platform_id"]: p for p in data.get("platforms", [])}
+            uav  = pmap.get("UAV-001", {})
+            loss = uav.get("ticn", {}).get("loss_pct", 0) or 0
+            if loss >= LINK_LOST_THRESHOLD and status['mode'] == 'MISSION':
+                print(f"[송골매] ⚠️  Link Lost (loss={loss}%) → LOITER 전환")
+                status['mode'] = 'LOITER'
+                loiter_ticks = 0
+            elif loss < LINK_LOST_THRESHOLD and status['mode'] == 'LOITER':
+                loiter_ticks += 1
+                if loiter_ticks >= 3:  # 6초 이상 안정 시 복귀
+                    print(f"[송골매] ✅ Link Restored (loss={loss}%) → 임무 복귀")
+                    status['mode'] = 'MISSION'
+            else:
+                loiter_ticks = 0
+        except Exception:
+            pass
 
 
 def listen_for_commands():
@@ -54,10 +85,23 @@ def listen_for_commands():
             if status['mode'] == 'LANDING':
                 print(f"[송골매] ✅ RTL 수신 SYS_ID={src} → 착륙 취소, 순항 고도 복귀")
                 status['mode'] = 'MISSION'
-                status['alt'] = ALTITUDE  # 순항 고도로 즉시 복귀
+                status['alt'] = ALTITUDE
             else:
                 print(f"[송골매] RTL 명령 수신 SYS_ID={src} → 귀환")
                 status['mode'] = 'RTL'
+        elif cmd == mavutil.mavlink.MAV_CMD_NAV_LOITER_UNLIM:
+            print(f"[송골매] HOLD 명령 수신 SYS_ID={src} → 선회 대기")
+            status['mode'] = 'LOITER'
+        elif cmd == mavutil.mavlink.MAV_CMD_DO_PAUSE_CONTINUE:
+            if msg.param1 == 0:
+                print(f"[송골매] PAUSE 명령 수신 SYS_ID={src} → 임무 정지")
+                status['mode'] = 'PAUSED'
+            else:
+                print(f"[송골매] RESUME 명령 수신 SYS_ID={src} → 임무 재개")
+                status['mode'] = 'MISSION'
+        elif cmd == mavutil.mavlink.MAV_CMD_DO_CHANGE_SPEED:
+            print(f"[송골매] MONITOR 명령 수신 SYS_ID={src} → 감시 모드")
+            status['mode'] = 'MISSION'
 
 
 def heading_deg(lat1, lon1, lat2, lon2):
@@ -69,6 +113,7 @@ def heading_deg(lat1, lon1, lat2, lon2):
 
 def main():
     threading.Thread(target=listen_for_commands, daemon=True).start()
+    threading.Thread(target=link_monitor, daemon=True).start()
 
     mav = mavutil.mavlink_connection(f'udpout:{UAV_HOST}:{UAV_PORT}', source_system=SYS_ID)
     mav.port.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -85,7 +130,18 @@ def main():
     while True:
         alt = status['alt']  # 방어 성공 시 스레드가 복구한 고도 반영
 
-        if status['mode'] == 'LANDING':
+        if status['mode'] == 'PAUSED':
+            print(f"[송골매] ⏸  임무 정지 — 현재 위치 유지 | 고도={alt}m")
+        elif status['mode'] == 'LOITER':
+            # 제자리 선회 — Link Lost / HOLD 명령 시
+            loiter_angle = (seq * 3) % 360
+            r_lat = 300 * LAT_PER_M
+            r_lon = 300 * LON_PER_M
+            lat = lat + r_lat * math.cos(math.radians(loiter_angle)) * 0.05
+            lon = lon + r_lon * math.sin(math.radians(loiter_angle)) * 0.05
+            hdg = (loiter_angle + 90) % 360
+            print(f"[송골매] 🔄 LOITER | 고도={alt}m 선회각={loiter_angle}°")
+        elif status['mode'] == 'LANDING':
             alt = max(0, alt - 100)
             status['alt'] = alt
             print(f"[송골매] ⚠️  착륙 중 (공격)... 현재 고도={alt}m")
@@ -93,11 +149,22 @@ def main():
                 print("[송골매] 착륙 완료. 임무 중단.")
                 break
         elif status['mode'] == 'RTL':
-            alt = max(0, alt - 100)
-            status['alt'] = alt
-            print(f"[송골매] RTL 귀환 중... 현재 고도={alt}m")
-            if alt == 0:
-                print("[송골매] RTL 완료.")
+            # 출발지(WP1)로 비행하면서 하강
+            home_lat, home_lon = WAYPOINTS[0]
+            hdg = heading_deg(lat, lon, home_lat, home_lon)
+            dlat = math.cos(math.radians(hdg)) * SPEED_MS * LAT_PER_M
+            dlon = math.sin(math.radians(hdg)) * SPEED_MS * LON_PER_M
+            lat += dlat
+            lon += dlon
+            dist_m = math.sqrt(((lat - home_lat) / LAT_PER_M) ** 2 +
+                               ((lon - home_lon) / LON_PER_M) ** 2)
+            # 출발지 근접 시 하강
+            if dist_m < 500:
+                alt = max(0, alt - 100)
+                status['alt'] = alt
+            print(f"[송골매] RTL 귀환 중... 고도={alt}m 거리={dist_m:.0f}m → WP1")
+            if alt == 0 and dist_m < 500:
+                print("[송골매] RTL 완료. 귀환 착륙.")
                 break
         else:
             # ── 다음 웨이포인트 방향으로 이동

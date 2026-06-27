@@ -315,6 +315,7 @@
   .sig-bar.s4 { height: 14px; }
   .sig-bar.on { background: #22c55e; }
   .sig-bar.warn { background: #f59e0b; }
+  .sig-bar.bad { background: #ef4444; }
 
   /* 범례 구역 아이콘 */
   .leg-zone { width: 14px; height: 10px; border-radius: 2px; flex-shrink: 0; }
@@ -393,6 +394,7 @@
   .b-ok   { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
   .b-sent { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
   .b-warn { background: #fef9c3; color: #a16207; border: 1px solid #fde68a; }
+  .b-bad  { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
   .b-mav  { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
   .b-ros  { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
   .b-atk  { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
@@ -469,4 +471,63 @@
   .gcs-tcell { background:#0d1117; padding:8px 12px; }
   .gcs-tlbl { font-size:9px; color:#8b949e; text-transform:uppercase; letter-spacing:1px; }
   .gcs-tval { font-size:15px; font-weight:700; color:#f0f6fc; margin-top:2px; }
+
+  /* ── 컴팩트 링크 테이블 ── */
+  .lnk-tbl { width:100%; border-collapse:collapse; }
+  .lnk-tbl th {
+    font-size:10px; color:#6b7a9a; font-weight:700; padding:4px 8px;
+    border-bottom:2px solid #e0e4ed; text-align:left; white-space:nowrap;
+  }
+  .lnk-tbl td {
+    font-size:11px; padding:4px 8px; border-bottom:1px solid #f0f2f5;
+    color:#1a1a2e; white-space:nowrap;
+  }
+
+  /* ── TMMR / TICN 시각화 ── */
+  .ticn-meter-wrap { display:flex; flex-direction:column; gap:2px; }
+  .ticn-meter-label { font-size:10px; color:#8a96aa; font-weight:600; }
+  .ticn-meter-val   { font-size:11px; font-weight:700; color:#1a1a2e; }
+
+  /* RSSI 세로 막대 */
+  .ticn-rssi-bar-wrap {
+    width:28px; height:60px; background:#f0f2f5; border-radius:4px;
+    display:flex; align-items:flex-end; overflow:hidden; border:1px solid #e0e4ed;
+  }
+  .ticn-rssi-bar {
+    width:100%; height:60%; background:linear-gradient(to top,#22c55e,#86efac);
+    border-radius:4px; transition:height 0.6s ease, background 0.4s;
+  }
+
+  /* LQ / 손실 가로 바 */
+  .ticn-lq-track {
+    height:8px; background:#f0f2f5; border-radius:4px; overflow:hidden;
+    border:1px solid #e0e4ed;
+  }
+  .ticn-lq-fill {
+    height:100%; width:60%; background:linear-gradient(to right,#22c55e,#86efac);
+    border-radius:4px; transition:width 0.6s ease, background 0.4s;
+  }
+  .ticn-loss-fill {
+    height:100%; width:10%; background:linear-gradient(to right,#fbbf24,#ef4444);
+    border-radius:4px; transition:width 0.6s ease;
+  }
+
+  /* 토폴로지 플로우 */
+  .ticn-topo {
+    display:flex; align-items:center; gap:4px; margin-top:10px;
+    padding:8px 10px; background:#f8f9fc; border-radius:6px;
+    border:1px solid #e8ebf2;
+  }
+  .ticn-node {
+    font-size:9.5px; font-weight:700; padding:3px 7px;
+    border-radius:4px; background:#fff; border:1px solid #dde1ea;
+    color:#1a1a2e; white-space:nowrap; transition:background 0.3s, color 0.3s, border-color 0.3s;
+  }
+  .ticn-node.node-ok   { background:#dcfce7; color:#15803d; border-color:#86efac; }
+  .ticn-node.node-warn { background:#fef3c7; color:#92400e; border-color:#fcd34d; }
+  .ticn-node.node-err  { background:#fee2e2; color:#dc2626; border-color:#fca5a5; }
+  .ticn-arrow { font-size:11px; color:#b0b8cc; flex-shrink:0; }
+  .ticn-arrow.arrow-ok   { color:#22c55e; }
+  .ticn-arrow.arrow-warn { color:#f59e0b; }
+  .ticn-arrow.arrow-err  { color:#ef4444; }
 </style>

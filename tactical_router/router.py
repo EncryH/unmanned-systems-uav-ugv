@@ -195,6 +195,27 @@ def main():
 
             if result is None:
                 lq = ticn.links.get(pid)
+                drop_event = {
+                    "platform_type": "NETWORK",
+                    "platform_id": "TICN-LINK",
+                    "target_platform_id": pid,
+                    "source": "TICN",
+                    "message": f"{pid} 통신 두절 — 패킷 드롭",
+                    "detail": f"LQ={lq.quality if lq else '?'} loss={lq.loss_pct if lq else '?'}% blackout={tmmr.blackout}",
+                    "level": "warn",
+                    "status": "OFFLINE",
+                    "time": time.strftime("%H:%M:%S"),
+                    "tmmr": tmmr.to_dict(),
+                    "ticn": {
+                        "link_quality": lq.quality if lq else 0,
+                        "loss_pct": lq.loss_pct if lq else 100.0,
+                        "dist_km": lq.dist_km if lq else 0.0,
+                    },
+                }
+                try:
+                    out_sock.sendto(json.dumps(drop_event).encode(), (DASHBOARD_HOST, DASHBOARD_PORT))
+                except Exception:
+                    pass
                 print(f"[TICN]  DROP  {pid}  LQ={lq.quality if lq else '?'}  jam={tmmr.jam_detected}")
                 continue
 

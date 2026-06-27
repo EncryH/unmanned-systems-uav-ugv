@@ -17,8 +17,8 @@ class TMMRNode:
     TMMR 무전기 — 노드별 SDR 레이어.
     역할: 파형 선택, RSSI 측정, 재밍 감지, 자동 채널홉, TX 전력 제어.
     """
-    RSSI_JAM_THRESHOLD = -45   # dBm 이상이면 재밍 잡음으로 판단
-    JAM_WINDOW         = 5     # 최근 N 패킷으로 재밍 판단
+    RSSI_JAM_THRESHOLD = -75   # dBm 이상이면 재밍 잡음으로 판단 (실거리 기준 조정)
+    JAM_WINDOW         = 3     # 최근 N 패킷으로 재밍 판단 (빠른 감지)
 
     def __init__(self, platform_id: str):
         self.platform_id  = platform_id
@@ -27,6 +27,7 @@ class TMMRNode:
         self.rssi         = -65.0
         self._rssi_hist: list[float] = []
         self.jam_detected = False
+        self.blackout     = False
         self.hop_count    = 0
 
     @property
@@ -57,6 +58,7 @@ class TMMRNode:
     def auto_hop(self, jammed: set[str], log_fn) -> bool:
         """재밍 감지 시 자동 파형 전환. 재밍 해제 시 K-WNW/VHF 복귀."""
         if not self.jam_detected:
+            self.blackout = False
             if self.waveform != 'K-WNW/VHF' and 'VHF' not in jammed:
                 old = self.waveform
                 self.waveform = 'K-WNW/VHF'
@@ -71,9 +73,14 @@ class TMMRNode:
         candidates = [w for w in WaveformSpec.PRIORITY
                       if w != self.waveform and w.split('/')[-1] not in jammed]
         if not candidates:
+            self.blackout = True
             print(f"[TMMR] ⚠️  {self.platform_id}: 전환 가능한 파형 없음")
+            log_fn({"layer": "TMMR", "event": "LINK_BLACKOUT",
+                    "platform": self.platform_id, "waveform": self.waveform,
+                    "reason": "ALL_WAVEFORMS_JAMMED", "rssi_dbm": self.rssi})
             return False
 
+        self.blackout = False
         old = self.waveform
         self.waveform = candidates[0]
         self._rssi_hist.clear()
@@ -100,5 +107,6 @@ class TMMRNode:
             'tx_power_pct': self.tx_power,
             'rssi_dbm':     self.rssi,
             'jam_detected': self.jam_detected,
+            'blackout':     self.blackout,
             'hop_count':    self.hop_count,
         }
