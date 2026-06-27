@@ -126,25 +126,71 @@ Docker 기반 UAV/UGV 도메인 가상 환경에서 무인체계의 Telemetry/Co
 
 ## 구현 범위
 
-본 프로젝트는 실제 TICN/SATCOM 또는 실제 MAVLink/ROS2 네트워크를 완전 구현한 것이 아니라,
-UAV/UGV 전술 통신 구조를 학습하고 시연하기 위한 Docker 기반 시뮬레이션이다.
+본 프로젝트는 실제 TICN, TMMR, MAVLink, ROS2 네트워크를 완전 구현하는 것이 아니라, **Docker 기반 UAV/UGV 도메인 가상 환경에서 Telemetry/Command 흐름과 AI 공격·방어 구조를 검증하기 위한 통신 시뮬레이션**이다.
 
-Telemetry는 MAVLink/ROS2/MQTT 메시지 구조를 모사한 JSON 기반 데이터로 생성되며,
-GCS가 CC(Companion Computer)로부터 직접 수신하여 Dashboard, Telemetry Collector, Tactical Router로 fan-out한다.
+UAV는 Autopilot/Flight Controller와 Companion Computer 구조를 모사한다. Autopilot/FC는 비행 제어와 Mission Command 실행을 담당하고, Companion Computer는 MAVLink-like Telemetry/Command, Payload Status, GCS 통신을 담당한다.
 
-Command는 Upper C2/BMS 또는 GCS 운용자가 생성하며, Upper C2 명령은 Router → GCS → CC → UAV/UGV 경로로 전달된다.
-GCS 운용자 직접 명령은 CC로 즉시 전달되며, 수신된 명령은 이후 Telemetry 상태 변화로 반영된다.
+UGV는 Vehicle Controller와 Onboard/Mission Computer 구조를 모사하며, ROS2/MQTT-like Telemetry와 Sensor Status를 생성한다.
+
+Telemetry는 실제 MAVLink/ROS2/MQTT 패킷이 아니라, 해당 메시지 구조를 참고한 JSON 기반 데이터로 생성된다. UAV/UGV의 Telemetry는 C2 Data Link를 통해 GCS / Mission Control Server로 전달된다.
+
+GCS는 Telemetry를 수신·해석하고 Dashboard, Telemetry Collector/LogDB, AI Defense Agent로 데이터를 분기한다. 또한 위치, 상태, 임무, 표적, 영상 메타데이터를 전술망 연동 메시지로 변환하여 Virtual Tactical Router/TIPS로 전달한다.
+
+Command는 GCS 운용자 또는 Upper C2/BMS Simulator에서 생성된다. Upper C2/BMS의 명령은 TICN-like Network, TMMR, Virtual Tactical Router/TIPS를 거쳐 GCS로 전달되고, GCS에서 UAV/UGV가 실행 가능한 Command로 변환된 뒤 C2 Data Link를 통해 하달된다.
+
+AI Attack Agent는 폐쇄형 Docker 가상 네트워크 내부에서 Telemetry 위조, Command 변조, GPS 이상 좌표, 통신 지연·손실·차단·변조 이벤트를 생성한다. AI Defense Agent는 실시간 Telemetry, Command Flow, Network Event, Mission State를 분석해 이상징후를 탐지하고 대응 정책을 결정한다.
 
 ## 시스템 구성 요소
 
-- UAV / UGV는 상태 정보를 생성한다.
-- Companion / Onboard Computer는 MAVLink를 수신하여 JSON으로 변환하고 GCS로 전달한다.
-- GCS / Ground Gateway는 텔레메트리를 직수신하고 전술망 하위 노드에 fan-out하는 중앙 허브이다.
-- Tactical Router / TIPS는 GCS 전술 데이터를 TMMR/TICN 시뮬레이션을 통해 Upper C2로 중계한다.
-- Upper C2 / BMS는 전술 상황을 판단하고 작전 명령을 Router 경유 하달하는 최상위 지휘 계층이다.
-- Dashboard는 상태, 링크, 로그, Agent 판단 결과를 시각화한다.
-- Telemetry Collector는 Raw 로그를 수집한다.
-- AI Agent는 로그와 상태 정보를 기반으로 공격/방어 판단 흐름을 생성한다.
+- **UAV Simulator**
+  - Autopilot/FC: 비행 제어, Mission Command 실행
+  - Companion Computer: MAVLink-like Telemetry/Command, Payload Status, GCS 통신
+
+- **UGV Simulator**
+  - Vehicle Controller: 주행 제어, Command 실행
+  - Onboard/Mission Computer: ROS2/MQTT-like Telemetry, Sensor Status, GCS 통신
+
+- **C2 Data Link**
+  - UAV/UGV와 GCS 사이의 Telemetry/Command 통신 구간
+  - Telemetry/Report: UAV/UGV → GCS
+  - Command/Tasking: GCS → UAV/UGV
+
+- **GCS / Ground Gateway / Mission Control Server**
+  - UAV/UGV Telemetry 수신·해석
+  - 임무 상태 판단 및 Command 생성
+  - Upper C2/BMS 명령을 UAV/UGV용 Command로 변환
+  - 전술망 연동 메시지 생성
+
+- **Dashboard**
+  - UAV/UGV 상태, 지도, 임무, 경고, 공격/방어 결과 시각화
+
+- **Telemetry Collector / LogDB**
+  - Telemetry Log, Command Log, Network Log, Attack Log 저장
+
+- **AI Attack Agent**
+  - 폐쇄형 Docker 가상망 내부에서 통제된 공격 이벤트 생성
+  - Telemetry 위조, Command 변조, GPS 이상 좌표, 통신 지연·손실·차단·변조 이벤트 수행
+
+- **AI Defense Agent**
+  - 실시간 Telemetry, Command Flow, Network Event, Mission State 분석
+  - Command 무결성 검증, 이상징후 탐지, 공격 유형 분류, 대응 정책 결정
+
+- **Virtual Tactical Router / TIPS**
+  - Docker Network 기반 가상 전술 라우터
+  - GCS와 전술망 사이의 IP 패킷 라우팅 및 전술망 데이터 중계
+  - 지연, 손실, 차단, 변조 이벤트 적용 지점
+  - MAVLink/ROS2 직접 해석 없음
+
+- **TMMR / 전투무선체계(CNRS-series)**
+  - Tactical Router/TIPS와 TICN-like Network 사이의 전술 무선 접속 구간 모사
+
+- **TICN-like Tactical Network**
+  - 전술정보통신망 데이터 전달 흐름 모사
+  - C4ISR 지휘통제망 연동 흐름 표현
+
+- **Upper C2 / BMS Simulator**
+  - 작전 상황 공유, 표적/좌표 공유, 감시 구역 지정, 임무 변경 지시
+  - UAV/UGV에 직접 명령하지 않고 GCS를 통해 Command로 변환
 
 ## 실행
 
