@@ -330,7 +330,21 @@
   let uavTarget = null, uavCurr = null;
   let ugvTarget = null, ugvCurr = null;
   let lastTrailLL = null;
+  let uavDispHdg = 0; // 현재 표시 중인 아이콘 회전각
   function lerp(a, b, t) { return a + (b - a) * t; }
+
+  // 최단 각도 보간 (0↔360 경계 처리)
+  function lerpAngle(a, b, t) {
+    let d = ((b - a + 540) % 360) - 180;
+    return a + d * t;
+  }
+
+  // 두 좌표 사이의 방위각 계산 (0°=North, CW)
+  function bearingTo(lat1, lon1, lat2, lon2) {
+    const dLat = lat2 - lat1;
+    const dLon = (lon2 - lon1) * Math.cos((lat1 + lat2) / 2 * Math.PI / 180);
+    return (Math.atan2(dLon, dLat) * 180 / Math.PI + 360) % 360;
+  }
 
   // ── 60fps 부드러운 이동 루프
   (function animateMap() {
@@ -340,7 +354,18 @@
       uavCurr.lat = lerp(uavCurr.lat, uavTarget.lat, 0.07);
       uavCurr.lon = lerp(uavCurr.lon, uavTarget.lon, 0.07);
       uavMk.setLatLng([uavCurr.lat, uavCurr.lon]);
-      // 궤적: 일정 거리 이상 이동 시 포인트 추가
+
+      // 이동 방향 벡터로 회전각 계산 → 부드럽게 보간
+      const dLat = uavTarget.lat - uavCurr.lat;
+      const dLon = uavTarget.lon - uavCurr.lon;
+      if (Math.abs(dLat) > 1e-7 || Math.abs(dLon) > 1e-7) {
+        const targetHdg = bearingTo(uavCurr.lat, uavCurr.lon, uavTarget.lat, uavTarget.lon);
+        uavDispHdg = lerpAngle(uavDispHdg, targetHdg, 0.06);
+        const imgEl = document.getElementById('uav-img');
+        if (imgEl) imgEl.style.transform = `rotate(${uavDispHdg - 135}deg)`;
+      }
+
+      // 궤적
       if (!lastTrailLL ||
           Math.abs(uavCurr.lat - lastTrailLL[0]) > 0.00012 ||
           Math.abs(uavCurr.lon - lastTrailLL[1]) > 0.00012) {
@@ -350,7 +375,6 @@
         uavTrail.setLatLngs(uavPositions);
         lastTrailLL = ll;
       }
-      // Payload 카메라는 animateMap에서 직접 구동하지 않음 (updateCamUAV가 처리)
     }
     if (ugvTarget) {
       if (!ugvCurr) ugvCurr = { lat: ugvTarget.lat, lon: ugvTarget.lon };
@@ -593,6 +617,110 @@
 
     d1Poll();
     setInterval(d1Poll, 1500);
+
+    // ── Mission State 타이머 ────────────────────────────────────────────
+    const MSN_START = new Date();
+    const MSN_PHASES = [
+      { phase: 'PRE_FLIGHT',  desc: '이륙 전 점검 중',            advice: '체크리스트 완료 후 이륙 허가 대기' },
+      { phase: 'TAKEOFF',     desc: '이륙 및 초기 상승 중',        advice: '안전 고도 확보 후 웨이포인트 진입' },
+      { phase: 'EN_ROUTE',    desc: '목표 지역으로 이동 중',        advice: '경로 유지 및 주변 감시 지속' },
+      { phase: 'ON_STATION',  desc: '정찰 구역 도달 — 임무 수행 중', advice: '센서 전방위 스캔 유지, 이상 징후 보고' },
+      { phase: 'RTB',         desc: '귀환 비행 중 (Return to Base)', advice: '랜딩 준비 체크리스트 수행' },
+    ];
+    let msnPhaseIdx = 2; // 기본 EN_ROUTE
+
+    function fmtDuration(ms) {
+      const s = Math.floor(ms / 1000);
+      const h = String(Math.floor(s / 3600)).padStart(2, '0');
+      const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+      const sec = String(s % 60).padStart(2, '0');
+      return `${h}:${m}:${sec}`;
+    }
+    function fmtTime(d) {
+      return d.toTimeString().slice(0, 8);
+    }
+    (function tickMsn() {
+      const el = k => document.getElementById(k);
+      const p = MSN_PHASES[msnPhaseIdx];
+      if (el('msn-phase'))   el('msn-phase').textContent   = p.phase;
+      if (el('msn-desc'))    el('msn-desc').textContent    = p.desc;
+      if (el('msn-advice'))  el('msn-advice').textContent  = p.advice;
+      if (el('msn-elapsed')) el('msn-elapsed').textContent = fmtDuration(Date.now() - MSN_START);
+      if (el('msn-start'))   el('msn-start').textContent   = fmtTime(MSN_START);
+      setTimeout(tickMsn, 1000);
+    })();
+
+    window.sendMsnCmd = function(cmd) {
+      const labels = { HOLD: '경로 유지', MONITOR: '감시 강화', PAUSE: '임무 일시정지' };
+      appendCmd('UAV-001', labels[cmd] || cmd, 'SENT');
+      setTimeout(() => updateCmdBadge('UAV-001', labels[cmd] || cmd, 'ACK'), 800 + Math.random() * 600);
+    };
+
+    // ── 최근 명령 로그 ──────────────────────────────────────────────────
+    const CMD_SEED = [
+      { src: 'UAV-001', name: '경로 유지',       status: 'ACK'  },
+      { src: 'UGV-001', name: '정찰 구역 유지',  status: 'ACK'  },
+      { src: 'UAV-001', name: '센서 상태 조회',  status: 'ACK'  },
+      { src: 'UGV-001', name: '전진 이동 20m/s', status: 'ACK'  },
+      { src: 'UAV-001', name: '상태 보고 요청',  status: 'SENT' },
+    ];
+    const cmdLog = document.getElementById('cmd-log');
+
+    function nowStr() { return new Date().toTimeString().slice(0, 8); }
+    function makeCmdItem(time, src, name, status) {
+      const badgeCls = status === 'ACK' ? 'cmd-badge-ack' : status === 'ERR' ? 'cmd-badge-err' : 'cmd-badge-sent';
+      const div = document.createElement('div');
+      div.className = 'cmd-item';
+      div.dataset.key = src + name;
+      div.innerHTML = `
+        <span class="cmd-time">${time}</span>
+        <div class="cmd-info">
+          <div class="cmd-name">${name}</div>
+          <div class="cmd-src">${src}</div>
+        </div>
+        <span class="cmd-badge ${badgeCls}">${status}</span>`;
+      return div;
+    }
+
+    // 시드 데이터로 초기 로그 채우기
+    const now = Date.now();
+    CMD_SEED.slice().reverse().forEach((c, i) => {
+      const t = new Date(now - (CMD_SEED.length - i) * 3000);
+      cmdLog.prepend(makeCmdItem(t.toTimeString().slice(0,8), c.src, c.name, c.status));
+    });
+
+    function appendCmd(src, name, status) {
+      if (!cmdLog) return;
+      const item = makeCmdItem(nowStr(), src, name, status);
+      cmdLog.prepend(item);
+      while (cmdLog.children.length > 30) cmdLog.lastChild.remove();
+    }
+    function updateCmdBadge(src, name, status) {
+      const key = src + name;
+      const el = cmdLog.querySelector(`[data-key="${key}"]`);
+      if (!el) return appendCmd(src, name, status);
+      const badge = el.querySelector('.cmd-badge');
+      if (!badge) return;
+      badge.className = 'cmd-badge ' + (status === 'ACK' ? 'cmd-badge-ack' : 'cmd-badge-sent');
+      badge.textContent = status;
+    }
+
+    // 주기적 시뮬레이션 명령 (10~20초 간격)
+    const AUTO_CMDS = [
+      { src: 'UAV-001', name: '웨이포인트 갱신' },
+      { src: 'UGV-001', name: '속도 조절 명령' },
+      { src: 'UAV-001', name: '센서 데이터 요청' },
+      { src: 'UGV-001', name: '경로 재계산' },
+      { src: 'UAV-001', name: '연료 상태 보고' },
+      { src: 'UAV-001', name: '목표 좌표 전송' },
+    ];
+    (function autoCmd() {
+      const c = AUTO_CMDS[Math.floor(Math.random() * AUTO_CMDS.length)];
+      appendCmd(c.src, c.name, 'SENT');
+      setTimeout(() => updateCmdBadge(c.src, c.name, 'ACK'), 600 + Math.random() * 800);
+      setTimeout(autoCmd, 10000 + Math.random() * 10000);
+    })();
+
   })();
 
   // ── 대시보드 전환 ─────────────────────────────────────────────────────

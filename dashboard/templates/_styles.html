@@ -221,6 +221,60 @@
     100% { transform: scale(1);   opacity: 0.6; }
   }
 
+  /* ── Mission State ── */
+  .msn-card { flex-shrink: 0; }
+  .msn-body { display: grid; grid-template-columns: 1fr 1.4fr; gap: 14px; }
+  .msn-phase-lbl { font-size: 10px; color: #8a96aa; margin-bottom: 2px; }
+  .msn-phase { font-size: 22px; font-weight: 800; color: #2563eb; letter-spacing: .5px; line-height: 1.1; }
+  .msn-meta { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+  .msn-meta-row { display: flex; justify-content: space-between; font-size: 10px; color: #8a96aa; gap: 6px; }
+  .msn-meta-row span:last-child { color: #1a1a2e; font-weight: 600; }
+  .msn-right { display: flex; flex-direction: column; gap: 6px; border-left: 1px solid #e5e9f0; padding-left: 14px; }
+  .msn-sub-lbl { font-size: 10px; color: #8a96aa; margin-bottom: 1px; }
+  .msn-desc { font-size: 13px; font-weight: 700; color: #1a1a2e; }
+  .msn-advice { font-size: 11px; color: #4b5563; }
+  .msn-actions { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
+  .msn-btn {
+    padding: 4px 10px; border-radius: 6px; border: 1px solid #dde1ea;
+    font-size: 11px; font-weight: 600; cursor: pointer;
+    background: #f3f5f9; color: #4b5563; transition: all .15s;
+  }
+  .msn-btn:hover { background: #e5e9f0; }
+  .msn-btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .msn-btn-primary:hover { background: #1d4ed8; }
+  .msn-btn-warn { border-color: #f59e0b; color: #92400e; background: #fffbeb; }
+  .msn-btn-warn:hover { background: #fef3c7; }
+
+  /* ── 최근 명령 ── */
+  .cmd-card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .cmd-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; min-height: 0; }
+  .cmd-item {
+    display: flex; align-items: center; gap: 7px;
+    padding: 5px 8px; border-radius: 6px;
+    border: 1px solid #e5e9f0; background: #fafbfd;
+    font-size: 11px;
+  }
+  .cmd-item:hover { background: #f0f2f8; }
+  .cmd-time { color: #8a96aa; font-size: 10px; font-variant-numeric: tabular-nums; flex-shrink: 0; width: 48px; }
+  .cmd-info { flex: 1; min-width: 0; }
+  .cmd-name { font-weight: 600; color: #1a1a2e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cmd-src  { font-size: 10px; color: #2563eb; }
+  .cmd-badge {
+    flex-shrink: 0; font-size: 9px; font-weight: 700; padding: 2px 6px;
+    border-radius: 4px; letter-spacing: .3px;
+  }
+  .cmd-badge-ack  { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+  .cmd-badge-sent { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+  .cmd-badge-err  { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+  .cmd-more {
+    border-top: 1px solid #e5e9f0; padding-top: 7px; margin-top: 5px; text-align: center;
+  }
+  .cmd-more button {
+    background: none; border: none; font-size: 11px; font-weight: 600;
+    color: #2563eb; cursor: pointer;
+  }
+  .cmd-more button:hover { text-decoration: underline; }
+
   /* 맵 사이드 패널 */
   .map-side-panel {
     width: 170px; flex-shrink: 0;
